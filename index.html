@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>トコモンQuest - 1週間70,000歩の相棒育成アドベンチャー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800;900&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"M PLUS Rounded 1c"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              500: '#10b981',
+              600: '#059669',
+            },
+            game: {
+              dark: '#08101a',
+              card: '#132133',
+              border: '#1f344d',
+            }
+          },
+          animation: {
+            'bounce-slow': 'bounce 3s infinite',
+            'float': 'float 3.2s ease-in-out infinite',
+            'wiggle': 'wiggle 0.5s ease-in-out',
+            'pulse-glow': 'pulseGlow 2.5s infinite ease-in-out',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            wiggle: {
+              '0%, 100%': { transform: 'rotate(-3.5deg) scale(1.05)' },
+              '50%': { transform: 'rotate(3.5deg) scale(1.05)' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: 0.45, transform: 'scale(1)' },
+              '50%': { opacity: 0.8, transform: 'scale(1.06)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html {
+      height: auto;
+    }
+    body {
+      background-color: #08101a;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.18), transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(14, 165, 233, 0.15), transparent 50%),
+        radial-gradient(circle at 15% 75%, rgba(245, 158, 11, 0.12), transparent 45%);
+      height: auto;
+      min-height: 100%;
+      color: #f8fafc;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09121d;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e3146;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2b4563;
+    }
+
+    .glass-panel {
+      background: rgba(19, 33, 51, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+    }
+
+    .monster-stage {
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .monster-stage:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body class="antialiased font-sans flex flex-col text-slate-100 pb-10">
+
+  <!-- Header -->
+  <header class="w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md sticky top-0 z-30 px-3 sm:px-4 py-2.5">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2.5 min-w-0">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-xl font-black shrink-0">
+          👟
+        </div>
+        <div class="truncate">
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-400 bg-clip-text text-transparent">
+              トコモンQuest
+            </h1>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold shrink-0">
+              70,000歩制
+            </span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium hidden xs:block sm:block truncate">1週間で70,000歩（1日1万歩）を歩いて最終進化！</p>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex items-center space-x-2 shrink-0">
+        <button id="viewArchiveBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs sm:text-sm font-bold transition flex items-center gap-1.5" title="週ごとの到達記録">
+          <span class="text-sm">🏆</span>
+          <span>記録</span>
+        </button>
+
+        <button id="changePartnerBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-sky-500/30 text-xs sm:text-sm font-bold transition flex items-center gap-1.5">
+          <span class="text-sm">🥚</span>
+          <span>相棒</span>
+        </button>
+
+        <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm transition" title="効果音の切替">
+          <span id="soundIcon">🔊</span>
+        </button>
+
+        <button id="guideBtn" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm transition" title="遊び方とルール">
+          <span>📖</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Season Progress Banner -->
+  <section class="max-w-6xl w-full mx-auto px-3 sm:px-5 md:px-6 pt-3">
+    <div class="glass-panel rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-emerald-500/25 bg-gradient-to-r from-slate-900/90 via-slate-900/75 to-emerald-950/30">
+      <div class="flex items-center space-x-3 w-full sm:w-auto">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold shrink-0">
+          ⏳
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black text-emerald-300 uppercase tracking-wider">SEASON CYCLE</span>
+            <span id="seasonBadge" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-bold">第1期</span>
+          </div>
+          <p id="weekPeriodText" class="text-xs sm:text-sm text-slate-200 mt-1 font-medium leading-relaxed">
+            期間: <span id="weekDateRange">2026/09/14 〜 2026/09/20</span><br class="xs:hidden">
+            (残り <strong id="daysRemaining" class="text-emerald-400 font-black text-sm sm:text-base">7</strong> 日)
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto border-t sm:border-t-0 pt-2.5 sm:pt-0 border-slate-800">
+        <div class="text-left sm:text-right mr-1">
+          <span class="text-xs text-slate-400 block sm:inline">達成率: </span>
+          <span id="weeklyGoalPercent" class="text-xs sm:text-sm font-black text-emerald-300">0% (0 / 70,000歩)</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="manualResetWeekBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-bold transition">
+            🔄 次の週へ
+          </button>
+          <button id="openFullResetModalBtn" class="px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/70 text-red-300 border border-red-500/30 text-xs sm:text-sm font-bold transition flex items-center gap-1" title="第1週に戻して全履歴を削除">
+            <span>⚠️</span>
+            <span>初期化</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl w-full mx-auto p-3 sm:p-5 md:px-6 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+
+    <!-- Left Column: Monster Sanctuary (lg: 7 cols) -->
+    <section class="lg:col-span-7 flex flex-col space-y-4">
+
+      <!-- Monster Visual Showcase Card -->
+      <div class="glass-panel rounded-3xl p-4 sm:p-6 relative overflow-hidden flex flex-col justify-between min-h-[390px] sm:min-h-[460px] border border-slate-700/60 shadow-2xl">
+        <div id="monsterGlowBg" class="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none transition-all duration-700"></div>
+        <div class="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"></div>
+
+        <!-- Stage Header & Lineage Info -->
+        <div class="flex items-center justify-between relative z-10">
+          <div class="flex items-center space-x-2">
+            <span id="stageBadge" class="px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              STAGE 1 / 5
+            </span>
+            <span id="lineageBadge" class="px-2.5 py-1 rounded-full text-xs sm:text-sm font-bold bg-slate-800/90 text-amber-300 border border-slate-700">
+              スライム族
+            </span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 block font-medium">今週の累計歩数</span>
+            <span id="weeklyStepsText" class="text-xl sm:text-2xl font-black text-emerald-400">0 <span class="text-xs text-slate-400 font-normal">/ 70,000 歩</span></span>
+          </div>
+        </div>
+
+        <!-- Monster Visual Centerpiece -->
+        <div class="my-auto py-3 flex flex-col items-center justify-center relative z-10 text-center">
+          
+          <div id="monsterSpeech" class="opacity-0 transition-all duration-300 transform -translate-y-2 mb-2 px-4 py-2 rounded-2xl bg-slate-900/95 text-emerald-300 text-sm sm:text-base font-bold border border-emerald-500/30 shadow-lg pointer-events-none max-w-[290px] sm:max-w-md">
+            トコトコ…今日もたくさん歩いてくれて嬉しいな！
+          </div>
+
+          <div id="monsterBox" class="monster-stage cursor-pointer relative group flex items-center justify-center w-48 h-48 sm:w-60 sm:h-60 animate-float">
+            <div id="monsterSvgContainer" class="w-full h-full flex items-center justify-center filter drop-shadow-2xl">
+              <!-- SVG Injected dynamically -->
+            </div>
+            
+            <span class="absolute bottom-0 text-xs text-slate-200 bg-slate-950/85 px-3 py-1 rounded-full border border-slate-700/60 opacity-0 group-hover:opacity-100 transition shadow">
+              タップしてふれあう ✨
+            </span>
+          </div>
+
+          <div class="mt-2">
+            <h2 id="monsterName" class="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow">
+              スライム
+            </h2>
+            <p id="monsterDesc" class="text-xs sm:text-sm text-slate-300 mt-1 max-w-sm mx-auto leading-relaxed font-medium">
+              ひんやりプルプルの小さな精霊。一歩一歩の足音をエネルギーにして大きくなる！
+            </p>
+          </div>
+        </div>
+
+        <!-- Progress to Next Stage & Overall 70,000 Steps Bar -->
+        <div class="relative z-10 pt-3 border-t border-slate-800/80">
+          <div class="flex justify-between items-baseline mb-1.5">
+            <span class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
+              <span class="text-emerald-400 text-base">🐾</span> 次の進化まで
+            </span>
+            <div class="text-right font-black text-sm">
+              <span id="currentStageExp" class="text-emerald-400 text-base sm:text-lg">0</span>
+              <span class="text-slate-500"> / </span>
+              <span id="targetStageExp" class="text-slate-300">8,000</span>
+              <span class="text-xs text-slate-400 font-normal"> 歩</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full h-4 sm:h-4.5 bg-slate-900/90 rounded-full p-0.5 border border-slate-700 overflow-hidden relative shadow-inner">
+            <div id="progressBar" class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 rounded-full transition-all duration-700 ease-out relative" style="width: 0%;">
+              <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center mt-2 text-xs sm:text-sm text-slate-300 font-medium">
+            <span id="nextEvolutionHint" class="truncate mr-2">次の姿：ビッグスライム</span>
+            <span id="remainingStepsHint" class="text-emerald-300 font-bold shrink-0">あと 8,000 歩で進化！</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distance & Calorie Estimation / Health Tips -->
+      <div class="glass-panel rounded-2xl p-3.5 sm:p-4 border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div class="flex items-center space-x-3 w-full md:w-auto">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center text-xl shrink-0">
+            🗺️
+          </div>
+          <div>
+            <span class="text-xs text-slate-400 block font-bold">今週の推定移動距離 &amp; 消費カロリー</span>
+            <p class="text-xs sm:text-sm text-slate-200 font-medium">
+              約 <strong id="estDistance" class="text-teal-300 font-black text-sm sm:text-base">0.0</strong> km 
+              <span class="text-slate-400">/ 約</span> <strong id="estCalories" class="text-amber-400 font-black text-sm sm:text-base">0</strong> kcal 相当
+            </p>
+          </div>
+        </div>
+
+        <!-- Weight Configuration & Estimation Formula -->
+        <div class="flex flex-wrap items-center justify-between md:justify-end gap-2.5 w-full md:w-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-800">
+          <div class="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-700/80 px-2.5 py-1.5 rounded-xl">
+            <label for="userWeightInput" class="text-xs font-bold text-slate-300 flex items-center gap-1">
+              <span>⚖️</span> 体重:
+            </label>
+            <input 
+              type="number" 
+              id="userWeightInput" 
+              min="20" 
+              max="200" 
+              step="0.5" 
+              value="60" 
+              class="w-16 bg-slate-800 border border-slate-600 rounded-lg px-2 py-0.5 text-xs sm:text-sm font-black text-white text-center focus:outline-none focus:border-teal-400"
+            />
+            <span class="text-xs text-slate-400 font-bold">kg</span>
+          </div>
+          <span class="text-[11px] text-slate-400 leading-snug block md:text-right">
+            ※ 距離(km) × 体重(kg) × 0.53 で現実的な消費量を算出
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Step Logger & Weekly Records (lg: 5 cols) -->
+    <section class="lg:col-span-5 flex flex-col space-y-4">
+      
+      <!-- Step Logging Card -->
+      <div class="glass-panel rounded-3xl p-4 sm:p-6 border border-slate-700/60 shadow-xl">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">👟</span>
+            <h3 class="text-base sm:text-lg font-black text-white">歩数を記録してエネルギー注入</h3>
+          </div>
+          <span class="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20">
+            即時反映
+          </span>
+        </div>
+
+        <form id="stepForm" class="space-y-4">
+          
+          <!-- Date Input -->
+          <div>
+            <label for="stepDate" class="block text-sm font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+              <span class="text-base">📅</span> 歩いた日
+            </label>
+            <input 
+              type="date" 
+              id="stepDate" 
+              name="stepDate" 
+              required
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3.5 py-3 text-base font-semibold text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+            />
+          </div>
+
+          <!-- Steps Input -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="stepInput" class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+                <span class="text-base">👟</span> 歩数 (Steps) を入力
+              </label>
+              <span class="text-xs text-slate-400">スマホの歩数計アプリの数値を入力</span>
+            </div>
+
+            <div class="relative">
+              <input 
+                type="number" 
+                id="stepInput" 
+                name="steps" 
+                min="1" 
+                max="999999" 
+                placeholder="例: 8500" 
+                required
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-2xl px-4 py-3.5 text-xl font-black text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition placeholder-slate-600"
+              />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-base text-slate-400 font-bold">歩</span>
+            </div>
+
+            <!-- Quick Add buttons for common step ranges -->
+            <div class="flex flex-wrap gap-2 mt-2.5">
+              <button type="button" class="quick-step-btn px-3 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded-xl border border-slate-700 font-bold" data-val="1000">+1,000</button>
+              <button type="button" class="quick-step-btn px-3 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded-xl border border-slate-700 font-bold" data-val="3000">+3,000</button>
+              <button type="button" class="quick-step-btn px-3 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded-xl border border-slate-700 font-bold" data-val="5000">+5,000</button>
+              <button type="button" class="quick-step-btn px-3 py-1.5 text-xs sm:text-sm bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 rounded-xl border border-slate-700 font-bold" data-val="10000">+10,000</button>
+              <button type="button" id="clearStepsBtn" class="px-3 py-1.5 text-xs sm:text-sm text-slate-400 hover:text-slate-200 ml-auto font-medium">クリア</button>
+            </div>
+          </div>
+
+          <!-- Memo (Optional) -->
+          <div>
+            <label for="stepMemo" class="block text-sm font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
+              <span class="text-base">📝</span> メモ（任意）
+            </label>
+            <input 
+              type="text" 
+              id="stepMemo" 
+              placeholder="例: 駅まで歩いた、休日のウィンドウショッピング" 
+              maxlength="40"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-slate-500"
+            />
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="submit" 
+            id="submitStepBtn"
+            class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-600 hover:from-emerald-400 hover:via-teal-400 hover:to-sky-500 active:scale-[0.98] text-white font-black text-base sm:text-lg shadow-lg shadow-emerald-600/30 transition duration-200 flex items-center justify-center space-x-2"
+          >
+            <span class="text-xl">🐾</span>
+            <span>歩数エネルギーを与える！</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Step History Section -->
+      <div class="glass-panel rounded-3xl p-4 sm:p-5 border border-slate-700/60 shadow-xl flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-lg">📜</span>
+            <h3 class="text-base font-black text-white">今週の歩行ログ</h3>
+          </div>
+          <button id="clearLogsBtn" class="text-xs font-semibold text-slate-400 hover:text-red-400 transition p-1">
+            今週の履歴消去
+          </button>
+        </div>
+
+        <div id="historyList" class="space-y-2.5 overflow-y-auto max-h-64 sm:max-h-72 pr-1 flex-1">
+          <div class="text-center py-8 text-slate-400 text-sm">
+            まだ今週の記録がありません。<br>歩いた日と歩数を入力して相棒を育てましょう！
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Starter Selection Modal -->
+  <div id="starterModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-7 border-2 border-emerald-400/80 shadow-2xl relative transform scale-95 transition-transform duration-300 max-h-[90vh] flex flex-col">
+      <div class="text-center pb-3 border-b border-slate-800">
+        <span class="inline-block px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-black tracking-wider uppercase mb-1">
+          Partner Select
+        </span>
+        <h3 class="text-xl sm:text-2xl font-black text-white">
+          今週共に歩む相棒を選ぼう！
+        </h3>
+        <p class="text-xs text-slate-300 mt-1">
+          選んだモンスターは1週間の歩数（累計70,000歩）で最高形態へと覚醒します！
+        </p>
+      </div>
+
+      <!-- 4 Lineages -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 my-4 overflow-y-auto pr-1">
+        
+        <!-- Choice 1: Slime -->
+        <div class="starter-card group p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-sky-400 cursor-pointer transition flex flex-col justify-between" data-lineage="slime">
+          <div class="flex items-center space-x-3 mb-2">
+            <div class="w-16 h-16 rounded-xl bg-sky-950/60 p-1 shrink-0 border border-sky-500/30 flex items-center justify-center group-hover:scale-105 transition">
+              <svg viewBox="0 0 100 100" class="w-12 h-12">
+                <path d="M50 20 C68 38, 82 58, 80 75 C78 90, 22 90, 20 75 C18 58, 32 38, 50 20 Z" fill="#38bdf8"/>
+                <circle cx="42" cy="60" r="4" fill="#0f172a"/><circle cx="58" cy="60" r="4" fill="#0f172a"/>
+                <circle cx="43" cy="58" r="1.5" fill="#ffffff"/><circle cx="59" cy="58" r="1.5" fill="#ffffff"/>
+              </svg>
+            </div>
+            <div>
+              <span class="text-[10px] text-sky-400 font-bold block">💧 スライム系</span>
+              <h4 class="text-base font-black text-white group-hover:text-sky-300">スライム</h4>
+              <p class="text-[11px] text-slate-400">プルプル愛されキャラ</p>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-300 font-bold block mb-0.5">進化ツリー：</span>
+            スライム → ビッグスライム → スライムキング → スライムエンペラー → <strong>ゴッドスライム</strong>
+          </div>
+        </div>
+
+        <!-- Choice 2: Fairy -->
+        <div class="starter-card group p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-teal-300 cursor-pointer transition flex flex-col justify-between" data-lineage="fairy">
+          <div class="flex items-center space-x-3 mb-2">
+            <div class="w-16 h-16 rounded-xl bg-teal-950/60 p-1 shrink-0 border border-teal-400/30 flex items-center justify-center group-hover:scale-105 transition">
+              <svg viewBox="0 0 100 100" class="w-12 h-12">
+                <ellipse cx="32" cy="40" rx="14" ry="7" fill="#67e8f9" opacity="0.6" transform="rotate(-30 32 40)"/>
+                <ellipse cx="68" cy="40" rx="14" ry="7" fill="#67e8f9" opacity="0.6" transform="rotate(30 68 40)"/>
+                <circle cx="50" cy="52" r="18" fill="#f0fdfa"/>
+                <circle cx="44" cy="50" r="3" fill="#0f766e"/><circle cx="56" cy="50" r="3" fill="#0f766e"/>
+                <circle cx="50" cy="58" r="2" fill="#f43f5e"/>
+              </svg>
+            </div>
+            <div>
+              <span class="text-[10px] text-teal-300 font-bold block">❄️ 妖精系</span>
+              <h4 class="text-base font-black text-white group-hover:text-teal-300">ホワイトフェアリー</h4>
+              <p class="text-[11px] text-slate-400">白銀と氷雪を纏う妖精</p>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-300 font-bold block mb-0.5">進化ツリー：</span>
+            ホワイトフェアリー → スノーフェアリー → ブリザードフェアリー → オーロラフェアリー → <strong>フェアリークイーン</strong>
+          </div>
+        </div>
+
+        <!-- Choice 3: Dragon -->
+        <div class="starter-card group p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-orange-500 cursor-pointer transition flex flex-col justify-between" data-lineage="dragon">
+          <div class="flex items-center space-x-3 mb-2">
+            <div class="w-16 h-16 rounded-xl bg-orange-950/60 p-1 shrink-0 border border-orange-500/30 flex items-center justify-center group-hover:scale-105 transition">
+              <svg viewBox="0 0 100 100" class="w-12 h-12">
+                <ellipse cx="50" cy="55" rx="22" ry="28" fill="#ea580c"/>
+                <path d="M42 42 L52 50 L46 58 L56 66" stroke="#fef08a" stroke-width="2.5" fill="none"/>
+                <circle cx="50" cy="35" r="4" fill="#fbbf24"/>
+              </svg>
+            </div>
+            <div>
+              <span class="text-[10px] text-orange-400 font-bold block">🔥 ドラゴン系</span>
+              <h4 class="text-base font-black text-white group-hover:text-orange-300">ドラゴンエッグ</h4>
+              <p class="text-[11px] text-slate-400">秘めたる炎を抱く神秘の卵</p>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-300 font-bold block mb-0.5">進化ツリー：</span>
+            ドラゴンエッグ → ドラゴンベビー → ドラゴンキッド → ファイアードラゴン → <strong>インフェルノドラゴン</strong>
+          </div>
+        </div>
+
+        <!-- Choice 4: Skeleton -->
+        <div class="starter-card group p-3.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 border-2 border-slate-700 hover:border-purple-400 cursor-pointer transition flex flex-col justify-between" data-lineage="skeleton">
+          <div class="flex items-center space-x-3 mb-2">
+            <div class="w-16 h-16 rounded-xl bg-purple-950/60 p-1 shrink-0 border border-purple-500/30 flex items-center justify-center group-hover:scale-105 transition">
+              <svg viewBox="0 0 100 100" class="w-12 h-12">
+                <circle cx="50" cy="46" r="20" fill="#cbd5e1"/>
+                <rect x="42" y="60" width="16" height="10" rx="3" fill="#cbd5e1"/>
+                <circle cx="43" cy="45" r="5" fill="#0f172a"/><circle cx="57" cy="45" r="5" fill="#0f172a"/>
+                <polygon points="50,50 47,56 53,56" fill="#0f172a"/>
+              </svg>
+            </div>
+            <div>
+              <span class="text-[10px] text-purple-400 font-bold block">💀 スケルトン系</span>
+              <h4 class="text-base font-black text-white group-hover:text-purple-300">スケルトン</h4>
+              <p class="text-[11px] text-slate-400">不死の魂を秘めた骸骨戦士</p>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <span class="text-slate-300 font-bold block mb-0.5">進化ツリー：</span>
+            スケルトン → スケルトンウォリアー → スケルトンジェネラル → スケルトンキング → <strong>スケルトンエンペラー</strong>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+        <button id="closeStarterModalBtn" class="text-xs text-slate-400 hover:text-slate-200 transition py-2 px-3">
+          閉じる
+        </button>
+        <p class="text-[11px] text-emerald-300 font-medium">
+          ※カードをクリックすると即座に相棒として決定されます
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Evolution Celebration Modal -->
+  <div id="evolutionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-md w-full rounded-3xl p-6 sm:p-8 text-center border-2 border-emerald-400/80 shadow-2xl relative transform scale-95 transition-transform duration-300">
+      
+      <div class="inline-block px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-xs font-black uppercase tracking-widest mb-3 animate-pulse">
+        Evolution Complete!
+      </div>
+
+      <h3 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-400 mb-2">
+        おめでとうございます！
+      </h3>
+
+      <p class="text-xs sm:text-sm text-slate-300 mb-5">
+        日々の歩数エネルギーによって、相棒が新たな姿へ進化したぞ！
+      </p>
+
+      <div class="w-48 h-48 mx-auto mb-4 relative flex items-center justify-center">
+        <div class="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse"></div>
+        <div id="modalMonsterContainer" class="w-full h-full flex items-center justify-center relative z-10 animate-bounce-slow">
+          <!-- Injected SVG -->
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <span class="text-xs text-slate-400 font-bold tracking-widest block">NEW FORM</span>
+        <h4 id="modalMonsterName" class="text-xl sm:text-2xl font-black text-emerald-300">
+          モンスター名
+        </h4>
+        <p id="modalMonsterDesc" class="text-xs text-slate-300 mt-1 max-w-xs mx-auto">
+          説明文
+        </p>
+      </div>
+
+      <button 
+        id="closeModalBtn" 
+        class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-sm shadow-lg shadow-emerald-500/30 transition transform active:scale-95"
+      >
+        次の進化を目指して歩き続ける！
+      </button>
+    </div>
+  </div>
+
+  <!-- Weekly Season Reset Modal -->
+  <div id="seasonResetModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-md w-full rounded-3xl p-6 sm:p-7 text-center border border-emerald-500/40 shadow-2xl relative transform scale-95 transition-transform duration-300">
+      
+      <div class="w-16 h-16 rounded-3xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto mb-3">
+        🏆
+      </div>
+
+      <h3 class="text-2xl font-black text-white mb-1">
+        1週間の冒険が終了しました！
+      </h3>
+
+      <p class="text-xs text-slate-300 mb-4">
+        今週の総歩数と育成結果を振り返り、新たな週をスタートしましょう！
+      </p>
+
+      <!-- Weekly Stats Box -->
+      <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 mb-5 text-left space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">今週の総歩数:</span>
+          <span id="seasonTotalSteps" class="font-black text-emerald-400 text-sm">0 歩</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">最終到達形態:</span>
+          <span id="seasonFinalForm" class="font-black text-slate-200">スライム</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-400">70,000歩 目標:</span>
+          <span id="seasonGoalStatus" class="font-bold text-emerald-400">達成！ 🎉</span>
+        </div>
+      </div>
+
+      <button 
+        id="startNewWeekBtn" 
+        class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-600 hover:from-emerald-400 hover:via-teal-400 hover:to-sky-500 text-white font-black text-sm shadow-lg shadow-emerald-600/30 transition transform active:scale-95"
+      >
+        新しいモンスターを選んで次週を始める！
+      </button>
+    </div>
+  </div>
+
+  <!-- Weekly Achievement Archive Modal -->
+  <div id="archiveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-7 border border-emerald-500/40 shadow-2xl relative transform scale-95 transition-transform duration-300 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">🏆</span>
+          <h3 class="text-base sm:text-lg font-black text-white">週ごとの到達記録（殿堂入り）</h3>
+        </div>
+        <button id="closeArchiveModalBtn" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-3">
+        これまでの週ごとの累計歩数と、育て上げた相棒モンスターの達成履歴です。
+      </p>
+
+      <div id="archiveListContainer" class="space-y-2.5 overflow-y-auto pr-1 flex-1">
+        <!-- Dynamic records injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Reset Cycle Confirmation Modal (No browser alert) -->
+  <div id="fullResetModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-md w-full rounded-3xl p-6 sm:p-7 text-center border-2 border-red-500/70 shadow-2xl relative transform scale-95 transition-transform duration-300">
+      <div class="w-14 h-14 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center text-3xl mx-auto mb-3 border border-red-500/30">
+        ⚠️
+      </div>
+      <h3 class="text-xl font-black text-white mb-2">
+        Season Cycle を初期化しますか？
+      </h3>
+      <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+        この操作を行うと、現在の週が<strong class="text-red-400">「第1週」</strong>に戻り、<br>
+        <strong class="text-emerald-300">今週の歩行ログ</strong>および<strong class="text-emerald-300">過去の週の到達記録</strong>がすべて完全に消去されます。よろしいですか？
+      </p>
+      
+      <div class="flex gap-3">
+        <button 
+          id="cancelFullResetBtn" 
+          class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition"
+        >
+          キャンセル
+        </button>
+        <button 
+          id="confirmFullResetBtn" 
+          class="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition shadow-lg shadow-red-600/30"
+        >
+          第1週に完全リセット
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Guide Modal -->
+  <div id="guideModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-panel max-w-lg w-full rounded-3xl p-6 border border-slate-700 shadow-2xl relative max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <span>📖</span> トコモンQuest ルール & 進化表
+        </h3>
+        <button id="closeGuideModalBtn" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <div class="overflow-y-auto space-y-3.5 pr-1 text-xs text-slate-300 flex-1">
+        <div class="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-200/90 leading-relaxed">
+          <strong>【1週間サイクル & 累計70,000歩】</strong><br>
+          1週間（7日間）で1日あたり約10,000歩を目指す健康応援クエストです。歩数を入力してエネルギーを与え、累計70,000歩を突破すると最高形態（神・女王・真竜・皇帝）へ覚醒します！
+        </div>
+
+        <h4 class="font-bold text-white text-sm">各ステージの必要歩数（全系統共通）</h4>
+        <div class="bg-slate-900/90 rounded-2xl p-3 border border-slate-800 space-y-2 text-[11px]">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+            <span class="font-bold text-slate-200">STAGE 1（初期体）</span>
+            <span class="text-slate-400">0 歩</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+            <span class="font-bold text-sky-300">STAGE 2（第1進化）</span>
+            <span class="text-emerald-300">+8,000 歩 (累計 8,000 歩)</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+            <span class="font-bold text-teal-300">STAGE 3（第2進化）</span>
+            <span class="text-emerald-300">+14,000 歩 (累計 22,000 歩)</span>
+          </div>
+          <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+            <span class="font-bold text-orange-300">STAGE 4（第3進化）</span>
+            <span class="text-emerald-300">+20,000 歩 (累計 42,000 歩)</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-red-400">STAGE 5（最終進化）</span>
+            <span class="text-red-400 font-black">+28,000 歩 (累計 70,000 歩 完全覚醒！)</span>
+          </div>
+        </div>
+
+        <h4 class="font-bold text-white text-sm mt-3">選べる4系統の相棒</h4>
+        <ul class="list-disc list-inside space-y-1 text-slate-400">
+          <li><strong class="text-slate-200">スライム系:</strong> スライム → ビッグスライム → スライムキング → スライムエンペラー → ゴッドスライム</li>
+          <li><strong class="text-slate-200">妖精系:</strong> ホワイトフェアリー → スノーフェアリー → ブリザードフェアリー → オーロラフェアリー → フェアリークイーン</li>
+          <li><strong class="text-slate-200">ドラゴン系:</strong> ドラゴンエッグ → ドラゴンベビー → ドラゴンキッド → ファイアードラゴン → インフェルノドラゴン</li>
+          <li><strong class="text-slate-200">スケルトン系:</strong> スケルトン → スケルトンウォリアー → スケルトンジェネラル → スケルトンキング → スケルトンエンペラー</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script>
+    /**
+     * Step Monster Evolution RPG (トコモンQuest)
+     * - Weekly 7-day Cycle Reset
+     * - Total Target: 70,000 steps (10,000 steps/day * 7 days)
+     * - Stage step requirements:
+     *     Stage 1 -> 2:  8,000 steps (Cum:  8,000)
+     *     Stage 2 -> 3: 14,000 steps (Cum: 22,000)
+     *     Stage 3 -> 4: 20,000 steps (Cum: 42,000)
+     *     Stage 4 -> 5: 28,000 steps (Cum: 70,000)
+     */
+
+    const STAGE_STEP_COSTS = [8000, 14000, 20000, 28000, 0];
+    const WEEKLY_GOAL_STEPS = 70000;
+
+    const MONSTER_LINEAGES = {
+      slime: {
+        name: "スライム族",
+        colorGlow: "rgba(56, 189, 248, 0.25)",
+        stages: [
+          {
+            name: "スライム",
+            title: "【初期体】",
+            desc: "ひんやりプルプルの小さな精霊。一歩一歩の足音をエネルギーにして大きくなる！",
+            speech: ["トコトコ…今日も歩いてくれてありがとう！", "お散歩の振動がとっても心地いいな！", "ナデナデされると足取りが軽くなるよ！"],
+            svg: () => `
+              <svg viewBox="0 0 200 200" class="w-full h-full filter drop-shadow-[0_15px_15px_rgba(56,189,248,0.35)]">
+                <defs>
+                  <linearGradient id="s1_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0284c7"/>
+                  </linearGradient>
+                </defs>
+                <ellipse cx="100" cy="180" rx="60" ry="12" fill="rgba(0,0,0,0.3)"/>
+                <path d="M100 35 C135 70, 165 110, 160 145 C155 175, 45 175, 40 145 C35 110, 65 70, 100 35 Z" fill="url(#s1_grad)"/>
+                <ellipse cx="78" cy="75" rx="14" ry="7" transform="rotate(-25 78 75)" fill="rgba(255,255,255,0.45)"/>
+                <circle cx="82" cy="118" r="9" fill="#0f172a"/><circle cx="118" cy="118" r="9" fill="#0f172a"/>
+                <circle cx="85" cy="115" r="3.5" fill="#ffffff"/><circle cx="121" cy="115" r="3.5" fill="#ffffff"/>
+                <circle cx="70" cy="128" r="7" fill="#f43f5e" opacity="0.6"/><circle cx="130" cy="128" r="7" fill="#f43f5e" opacity="0.6"/>
+                <path d="M93 128 Q100 137 107 128" stroke="#0f172a" stroke-width="3" stroke-linecap="round" fill="transparent"/>
+              </svg>
+            `
+          },
+          {
+            name: "ビッグスライム",
+            title: "【巨大化形態】",
+            desc: "日々の歩数を蓄えて大きく育ったスライム。小さなティアラを乗せている！",
+            speech: ["ドッスン！こんなに大きくなったよ！", "8,000歩達成ありがとう！次はキングだ！", "通勤の早歩きパワーは格別だね！"],
+            svg: () => `
+              <svg viewBox="0 0 220 220" class="w-full h-full filter drop-shadow-[0_15px_20px_rgba(37,99,235,0.4)]">
+                <defs>
+                  <linearGradient id="s2_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8"/><stop offset="60%" stop-color="#2563eb"/><stop offset="100%" stop-color="#1d4ed8"/>
+                  </linearGradient>
+                </defs>
+                <ellipse cx="110" cy="195" rx="80" ry="16" fill="rgba(0,0,0,0.35)"/>
+                <path d="M110 50 C160 80, 195 125, 190 165 C185 200, 35 200, 30 165 C25 125, 60 80, 110 50 Z" fill="url(#s2_grad)"/>
+                <path d="M92 48 L100 28 L110 40 L120 28 L128 48 Z" fill="#fbbf24" stroke="#b45309" stroke-width="2"/>
+                <circle cx="85" cy="130" r="11" fill="#0f172a"/><circle cx="135" cy="130" r="11" fill="#0f172a"/>
+                <circle cx="88" cy="126" r="4.5" fill="#ffffff"/><circle cx="138" cy="126" r="4.5" fill="#ffffff"/>
+                <circle cx="70" cy="142" r="9" fill="#f43f5e" opacity="0.6"/><circle cx="150" cy="142" r="9" fill="#f43f5e" opacity="0.6"/>
+                <path d="M100 142 Q110 155 120 142" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" fill="#b91c1c"/>
+              </svg>
+            `
+          },
+          {
+            name: "スライムキング",
+            title: "【王位継承形態】",
+            desc: "黄金の王冠を授かり、歩く者の王となった偉大なスライム！",
+            speech: ["余こそがスライムキング！歩めよ臣民！", "毎日歩くそなたの健脚に栄光あれ！", "この王冠は君の22,000歩の結晶だ！"],
+            svg: () => `
+              <svg viewBox="0 0 240 240" class="w-full h-full filter drop-shadow-[0_15px_25px_rgba(245,158,11,0.45)]">
+                <defs>
+                  <linearGradient id="s3_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1e40af"/>
+                  </linearGradient>
+                  <linearGradient id="gold_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fef08a"/><stop offset="100%" stop-color="#d97706"/>
+                  </linearGradient>
+                </defs>
+                <ellipse cx="120" cy="210" rx="90" ry="18" fill="rgba(0,0,0,0.4)"/>
+                <path d="M120 60 C185 85, 215 140, 205 185 C195 220, 45 220, 35 185 C25 140, 55 85, 120 60 Z" fill="url(#s3_grad)"/>
+                <path d="M80 60 L95 18 L120 40 L145 18 L160 60 Z" fill="url(#gold_grad)" stroke="#92400e" stroke-width="3"/>
+                <circle cx="95" cy="18" r="5" fill="#ef4444"/><circle cx="120" cy="15" r="6" fill="#3b82f6"/><circle cx="145" cy="18" r="5" fill="#10b981"/>
+                <circle cx="95" cy="140" r="12" fill="#0f172a"/><circle cx="145" cy="140" r="12" fill="#0f172a"/>
+                <circle cx="98" cy="136" r="5" fill="#ffffff"/><circle cx="148" cy="136" r="5" fill="#ffffff"/>
+                <path d="M108 152 Q120 168 132 152" stroke="#0f172a" stroke-width="4" stroke-linecap="round" fill="#b91c1c"/>
+              </svg>
+            `
+          },
+          {
+            name: "スライムエンペラー",
+            title: "【皇帝形態】",
+            desc: "王を超え皇帝へ。背後にオーラリングを浮かべ大地を踏破する！",
+            speech: ["フハハ！42,000歩を踏破した皇帝の威光を見よ！", "あと少しで神の領域（70,000歩）に達するぞ！", "歩き続ける意志こそ、世界を拓く力！"],
+            svg: () => `
+              <svg viewBox="0 0 250 250" class="w-full h-full filter drop-shadow-[0_20px_30px_rgba(147,51,234,0.5)]">
+                <defs>
+                  <linearGradient id="s4_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#818cf8"/><stop offset="50%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#312e81"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="125" cy="125" r="110" fill="none" stroke="#a855f7" stroke-width="4" stroke-dasharray="8 6" opacity="0.7"/>
+                <ellipse cx="125" cy="215" rx="95" ry="20" fill="rgba(0,0,0,0.45)"/>
+                <path d="M125 55 C195 75, 225 140, 215 190 C205 225, 45 225, 35 190 C25 140, 55 75, 125 55 Z" fill="url(#s4_grad)"/>
+                <path d="M70 120 C100 150, 150 150, 180 120" stroke="#f59e0b" stroke-width="6" fill="none"/>
+                <polygon points="80,55 95,10 125,35 155,10 170,55" fill="#fde047" stroke="#b45309" stroke-width="3"/>
+                <circle cx="125" cy="35" r="7" fill="#a855f7"/>
+                <circle cx="95" cy="135" r="12" fill="#0f172a"/><circle cx="155" cy="135" r="12" fill="#0f172a"/>
+                <circle cx="98" cy="132" r="5" fill="#c084fc"/><circle cx="158" cy="132" r="5" fill="#c084fc"/>
+              </svg>
+            `
+          },
+          {
+            name: "ゴッドスライム",
+            title: "【神聖覚醒体】",
+            desc: "70,000歩を完遂して神の座に君臨した光のスライム！",
+            speech: ["70,000歩完全制覇！君の一歩一歩が奇跡を起こした！", "1週間の歩行、見事であった！", "健康と神の加護が永遠に共にある！"],
+            svg: () => `
+              <svg viewBox="0 0 260 260" class="w-full h-full filter drop-shadow-[0_20px_40px_rgba(250,204,21,0.7)]">
+                <defs>
+                  <linearGradient id="s5_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#ffffff"/>
+                  </linearGradient>
+                </defs>
+                <path d="M50 120 C-10 70, 0 10, 60 50 C40 80, 50 100, 50 120 Z" fill="#ffffff" opacity="0.9"/>
+                <path d="M210 120 C270 70, 260 10, 200 50 C220 80, 210 100, 210 120 Z" fill="#ffffff" opacity="0.9"/>
+                <ellipse cx="130" cy="35" rx="55" ry="14" fill="none" stroke="#facc15" stroke-width="6"/>
+                <path d="M130 50 C205 75, 230 145, 220 195 C210 235, 50 235, 40 195 C30 145, 55 75, 130 50 Z" fill="url(#s5_grad)"/>
+                <circle cx="105" cy="135" r="11" fill="#1e3a8a"/><circle cx="155" cy="135" r="11" fill="#1e3a8a"/>
+                <circle cx="108" cy="132" r="5" fill="#ffffff"/><circle cx="158" cy="132" r="5" fill="#ffffff"/>
+                <path d="M120 150 Q130 160 140 150" stroke="#1e3a8a" stroke-width="4" stroke-linecap="round" fill="none"/>
+              </svg>
+            `
+          }
+        ]
+      },
+
+      fairy: {
+        name: "妖精族",
+        colorGlow: "rgba(45, 212, 191, 0.25)",
+        stages: [
+          {
+            name: "ホワイトフェアリー",
+            title: "【初期体】",
+            desc: "雪のように白い小さな妖精。羽をパタパタさせてウォーキングを応援！",
+            speech: ["パタパタ…今日の歩数もがんばろう！", "歩いた分だけ風が気持ちいいね！", "一歩一歩がキラキラ輝いてるよ！"],
+            svg: () => `
+              <svg viewBox="0 0 200 200" class="w-full h-full filter drop-shadow-[0_15px_15px_rgba(45,212,191,0.35)]">
+                <ellipse cx="45" cy="80" rx="30" ry="15" fill="#a5f3fc" opacity="0.7" transform="rotate(-30 45 80)"/>
+                <ellipse cx="155" cy="80" rx="30" ry="15" fill="#a5f3fc" opacity="0.7" transform="rotate(30 155 80)"/>
+                <ellipse cx="100" cy="180" rx="45" ry="10" fill="rgba(0,0,0,0.3)"/>
+                <path d="M100 70 C125 70, 135 120, 125 155 C115 170, 85 170, 75 155 C65 120, 75 70, 100 70 Z" fill="#f0fdfa"/>
+                <circle cx="100" cy="70" r="30" fill="#f8fafc"/>
+                <circle cx="90" cy="68" r="4.5" fill="#0f766e"/><circle cx="110" cy="68" r="4.5" fill="#0f766e"/>
+                <circle cx="82" cy="75" r="4" fill="#f43f5e" opacity="0.5"/><circle cx="118" cy="75" r="4" fill="#f43f5e" opacity="0.5"/>
+              </svg>
+            `
+          },
+          {
+            name: "スノーフェアリー",
+            title: "【氷晶形態】",
+            desc: "歩数を得て氷の結晶を宿し、爽やかな冷涼オーラで疲れを癒やす！",
+            speech: ["ひんやり〜！歩いた後の足を癒やすよ！", "8,000歩達成！羽も大きくなったの！", "歩くリズムが心地よいメロディになるね！"],
+            svg: () => `
+              <svg viewBox="0 0 220 220" class="w-full h-full filter drop-shadow-[0_15px_20px_rgba(56,189,248,0.4)]">
+                <polygon points="40,80 10,40 50,55" fill="#38bdf8" opacity="0.8"/>
+                <polygon points="180,80 210,40 170,55" fill="#38bdf8" opacity="0.8"/>
+                <ellipse cx="110" cy="190" rx="55" ry="12" fill="rgba(0,0,0,0.35)"/>
+                <path d="M110 80 C140 80, 150 140, 135 175 C120 190, 100 190, 85 175 C70 140, 80 80, 110 80 Z" fill="#ccfbf1"/>
+                <circle cx="110" cy="75" r="34" fill="#f0fdfa"/>
+                <polygon points="110,30 114,40 106,40" fill="#0284c7"/>
+                <circle cx="98" cy="74" r="5" fill="#0284c7"/><circle cx="122" cy="74" r="5" fill="#0284c7"/>
+              </svg>
+            `
+          },
+          {
+            name: "ブリザードフェアリー",
+            title: "【吹雪形態】",
+            desc: "猛吹雪を意のままに操る気高き妖精。氷の杖を携えて先導する！",
+            speech: ["強い風の日も一歩前へ！", "22,000歩突破ね！頼もしい健脚だわ！", "あなたの歩調が嵐を静める力になる！"],
+            svg: () => `
+              <svg viewBox="0 0 240 240" class="w-full h-full filter drop-shadow-[0_15px_25px_rgba(14,165,233,0.5)]">
+                <path d="M50 100 C10 40, 30 10, 80 50 Z" fill="#38bdf8" opacity="0.85"/>
+                <path d="M190 100 C230 40, 210 10, 160 50 Z" fill="#38bdf8" opacity="0.85"/>
+                <line x1="175" y1="50" x2="175" y2="200" stroke="#bae6fd" stroke-width="4"/>
+                <circle cx="175" cy="50" r="10" fill="#0284c7"/>
+                <path d="M120 90 C150 90, 165 160, 145 195 C130 210, 110 210, 95 195 C75 160, 90 90, 120 90 Z" fill="#99f6e4"/>
+                <circle cx="120" cy="80" r="36" fill="#f0fdfa"/>
+                <circle cx="108" cy="78" r="5.5" fill="#0369a1"/><circle cx="132" cy="78" r="5.5" fill="#0369a1"/>
+              </svg>
+            `
+          },
+          {
+            name: "オーロラフェアリー",
+            title: "【極光形態】",
+            desc: "夜空にたなびく極光のベールを纏い、歩行の軌跡を虹色に染める！",
+            speech: ["オーロラの光が足元を照らしているわ！", "42,000歩達成！あと少しでクイーンへ！", "あなたの毎日の積み重ねが世界を彩るの！"],
+            svg: () => `
+              <svg viewBox="0 0 250 250" class="w-full h-full filter drop-shadow-[0_20px_35px_rgba(168,85,247,0.5)]">
+                <path d="M30 60 Q125 10 220 60 Q125 110 30 60" fill="none" stroke="#2dd4bf" stroke-width="6" opacity="0.8"/>
+                <path d="M30 80 Q125 30 220 80 Q125 130 30 80" fill="none" stroke="#c084fc" stroke-width="6" opacity="0.8"/>
+                <path d="M60 110 C15 50, 45 15, 95 65 Z" fill="#a7f3d0" opacity="0.8"/>
+                <path d="M190 110 C235 50, 205 15, 155 65 Z" fill="#e9d5ff" opacity="0.8"/>
+                <path d="M125 95 C160 95, 175 170, 155 205 C135 220, 115 220, 95 205 C75 170, 90 95, 125 95 Z" fill="#ccfbf1"/>
+                <circle cx="125" cy="85" r="38" fill="#f8fafc"/>
+                <circle cx="112" cy="82" r="6" fill="#7e22ce"/><circle cx="138" cy="82" r="6" fill="#7e22ce"/>
+              </svg>
+            `
+          },
+          {
+            name: "フェアリークイーン",
+            title: "【妖精女王形態】",
+            desc: "70,000歩の道を制覇し、全精霊を統べる女王へ戴冠！神々しい光を放つ！",
+            speech: ["見事です！70,000歩の栄光をあなたに！", "健やかな足腰と美しい姿勢を手に入れましたね！", "これからも共に歩んでいきましょう！"],
+            svg: () => `
+              <svg viewBox="0 0 260 260" class="w-full h-full filter drop-shadow-[0_20px_40px_rgba(45,212,191,0.7)]">
+                <path d="M60 120 C-10 40, 10 -10, 90 50 Z" fill="#5eead4" opacity="0.9"/>
+                <path d="M200 120 C270 40, 250 -10, 170 50 Z" fill="#c084fc" opacity="0.9"/>
+                <polygon points="105,45 115,18 130,32 145,18 155,45" fill="#fde047" stroke="#b45309" stroke-width="2"/>
+                <circle cx="130" cy="32" r="5" fill="#14b8a6"/>
+                <path d="M130 95 C175 100, 195 180, 175 225 C145 240, 115 240, 85 225 C65 180, 85 100, 130 95 Z" fill="#e0e7ff"/>
+                <circle cx="130" cy="82" r="38" fill="#ffffff"/>
+                <circle cx="116" cy="80" r="6" fill="#0f766e"/><circle cx="144" cy="80" r="6" fill="#0f766e"/>
+              </svg>
+            `
+          }
+        ]
+      },
+
+      dragon: {
+        name: "ドラゴン族",
+        colorGlow: "rgba(239, 68, 68, 0.25)",
+        stages: [
+          {
+            name: "ドラゴンエッグ",
+            title: "【卵形態】",
+            desc: "灼熱のエネルギーを宿す竜の卵。歩数を重ねることで温まり孵化へ向かう！",
+            speech: ["ピキッ…歩く振動で温まってきた！", "もっとたくさん歩いて卵を孵して！", "トコトコ歩く足音が聞こえるぞ！"],
+            svg: () => `
+              <svg viewBox="0 0 200 200" class="w-full h-full filter drop-shadow-[0_15px_20px_rgba(234,88,12,0.4)]">
+                <ellipse cx="100" cy="180" rx="55" ry="12" fill="rgba(0,0,0,0.35)"/>
+                <ellipse cx="100" cy="110" rx="55" ry="70" fill="#ea580c"/>
+                <path d="M80 80 L100 100 L88 120 L110 140" stroke="#fef08a" stroke-width="4" fill="none"/>
+                <circle cx="100" cy="100" r="6" fill="#facc15"/>
+              </svg>
+            `
+          },
+          {
+            name: "ドラゴンベビー",
+            title: "【竜幼体】",
+            desc: "8,000歩で殻を破って生まれたドラゴン。ヨチヨチ歩きながらついてくる！",
+            speech: ["ギャオッ！生まれたよ！", "歩いたエネルギーでお腹いっぱい！", "もっと長い距離を走れるようになりたいな！"],
+            svg: () => `
+              <svg viewBox="0 0 220 220" class="w-full h-full filter drop-shadow-[0_15px_20px_rgba(249,115,22,0.4)]">
+                <ellipse cx="110" cy="190" rx="60" ry="12" fill="rgba(0,0,0,0.35)"/>
+                <path d="M65 110 C35 85, 40 55, 75 70 Z" fill="#ef4444"/>
+                <path d="M155 110 C185 85, 180 55, 145 70 Z" fill="#ef4444"/>
+                <path d="M110 75 C145 75, 155 130, 140 170 C130 185, 90 185, 80 170 C65 130, 75 75, 110 75 Z" fill="#f97316"/>
+                <path d="M110 110 C125 110, 130 140, 125 165 C115 175, 105 175, 95 165 C90 140, 95 110, 110 110 Z" fill="#fef08a"/>
+                <circle cx="95" cy="95" r="7" fill="#0f172a"/><circle cx="125" cy="95" r="7" fill="#0f172a"/>
+              </svg>
+            `
+          },
+          {
+            name: "ドラゴンキッド",
+            title: "【竜若体】",
+            desc: "角と翼が生え揃い、地を駆け空を飛ぶ元気いっぱいの少年ドラゴン！",
+            speech: ["グルルッ！22,000歩達成！速く走れるぞ！", "階段やお散歩のステップが翼を鍛える！", "次は大空を焦がすファイアードラゴンだ！"],
+            svg: () => `
+              <svg viewBox="0 0 240 240" class="w-full h-full filter drop-shadow-[0_15px_25px_rgba(220,38,38,0.45)]">
+                <path d="M60 110 C15 70, 25 30, 80 55 Z" fill="#dc2626"/>
+                <path d="M180 110 C225 70, 215 30, 160 55 Z" fill="#dc2626"/>
+                <ellipse cx="120" cy="205" rx="70" ry="14" fill="rgba(0,0,0,0.4)"/>
+                <path d="M120 70 C165 70, 175 140, 160 185 C145 205, 95 205, 80 185 C65 140, 75 70, 120 70 Z" fill="#ea580c"/>
+                <polygon points="98,65 88,40 108,55" fill="#f59e0b"/>
+                <polygon points="142,65 152,40 132,55" fill="#f59e0b"/>
+                <circle cx="102" cy="95" r="8" fill="#0f172a"/><circle cx="138" cy="95" r="8" fill="#0f172a"/>
+              </svg>
+            `
+          },
+          {
+            name: "ファイアードラゴン",
+            title: "【業火竜形態】",
+            desc: "巨大な翼と燃え盛る尾を持ち、大地の距離を飛び越える真紅の巨竜！",
+            speech: ["ウォォォッ！42,000歩の熱気が炎となる！", "君の歩いた距離が我が炎の燃料だ！", "究極のインフェルノまであと少し！"],
+            svg: () => `
+              <svg viewBox="0 0 250 250" class="w-full h-full filter drop-shadow-[0_20px_30px_rgba(185,28,28,0.55)]">
+                <path d="M80 100 C20 40, 10 10, 70 40 C80 60, 90 80, 80 100 Z" fill="#b91c1c"/>
+                <path d="M170 100 C230 40, 240 10, 180 40 C170 60, 160 80, 170 100 Z" fill="#b91c1c"/>
+                <path d="M125 60 C175 60, 185 135, 170 190 C155 215, 95 215, 80 190 C65 135, 75 60, 125 60 Z" fill="#c2410c"/>
+                <polygon points="100,55 80,20 105,45" fill="#fbbf24"/>
+                <polygon points="150,55 170,20 145,45" fill="#fbbf24"/>
+                <polygon points="105,80 118,85 105,90" fill="#fef08a"/>
+                <polygon points="155,80 142,88 155,90" fill="#fef08a"/>
+              </svg>
+            `
+          },
+          {
+            name: "インフェルノドラゴン",
+            title: "【地獄劫火覚醒体】",
+            desc: "70,000歩を踏破して顕現した至高の竜！大地の道をすべて制覇した！",
+            speech: ["グオォォッ！70,000歩の覇者よ、見事なり！", "君の不屈の足跡こそ、最強の証！", "この炎と共に次の週も突き進もう！"],
+            svg: () => `
+              <svg viewBox="0 0 260 260" class="w-full h-full filter drop-shadow-[0_20px_45px_rgba(220,38,38,0.7)]">
+                <defs>
+                  <linearGradient id="inf_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f97316"/><stop offset="50%" stop-color="#dc2626"/><stop offset="100%" stop-color="#7f1d1d"/>
+                  </linearGradient>
+                </defs>
+                <path d="M100 110 C30 50, 0 10, 30 70 C40 100, 70 120, 100 110 Z" fill="#ea580c"/>
+                <path d="M160 110 C230 50, 260 10, 230 70 C220 100, 190 120, 160 110 Z" fill="#ea580c"/>
+                <path d="M130 60 C185 60, 200 130, 185 195 C170 225, 90 225, 75 195 C60 130, 75 60, 130 60 Z" fill="url(#inf_grad)"/>
+                <path d="M105 60 C80 20, 50 15, 55 35 C65 50, 85 55, 95 62 Z" fill="#fde047"/>
+                <path d="M155 60 C180 20, 210 15, 205 35 C195 50, 175 55, 165 62 Z" fill="#fde047"/>
+                <polygon points="105,82 118,88 103,94" fill="#fef08a"/>
+                <polygon points="155,82 142,88 157,94" fill="#fef08a"/>
+              </svg>
+            `
+          }
+        ]
+      },
+
+      skeleton: {
+        name: "スケルトン族",
+        colorGlow: "rgba(168, 85, 247, 0.25)",
+        stages: [
+          {
+            name: "スケルトン",
+            title: "【初期体】",
+            desc: "骨だけのユーモラスな戦士。歩行の衝撃で骨密度を高めたい！",
+            speech: ["カタカタ…歩くことは骨を丈夫にする最高の特効薬！", "散歩のコツコツという振動が大好物！", "骨身を惜しまず歩くぞ！"],
+            svg: () => `
+              <svg viewBox="0 0 200 200" class="w-full h-full filter drop-shadow-[0_15px_15px_rgba(168,85,247,0.35)]">
+                <ellipse cx="100" cy="180" rx="50" ry="10" fill="rgba(0,0,0,0.3)"/>
+                <circle cx="100" cy="70" r="32" fill="#e2e8f0"/>
+                <rect x="88" y="92" width="24" height="15" rx="4" fill="#e2e8f0"/>
+                <circle cx="88" cy="68" r="7" fill="#0f172a"/><circle cx="112" cy="68" r="7" fill="#0f172a"/>
+                <polygon points="100,75 96,82 104,82" fill="#0f172a"/>
+                <line x1="94" y1="98" x2="94" y2="105" stroke="#0f172a" stroke-width="2"/>
+                <line x1="100" y1="98" x2="100" y2="105" stroke="#0f172a" stroke-width="2"/>
+                <line x1="106" y1="98" x2="106" y2="105" stroke="#0f172a" stroke-width="2"/>
+                <path d="M85 125 C100 120, 115 120, 115 125" stroke="#e2e8f0" stroke-width="5" fill="none"/>
+                <path d="M80 140 C100 135, 120 135, 120 140" stroke="#e2e8f0" stroke-width="5" fill="none"/>
+              </svg>
+            `
+          },
+          {
+            name: "スケルトンウォリアー",
+            title: "【剣士形態】",
+            desc: "鉄剣と木の盾を装備し、8,000歩の行軍に耐える健脚兵士！",
+            speech: ["カタカタッ！歩兵の基本は歩くこと！", "8,000歩のパトロール完了！", "下半身の骨がしっかりしてきたぞ！"],
+            svg: () => `
+              <svg viewBox="0 0 220 220" class="w-full h-full filter drop-shadow-[0_15px_20px_rgba(148,163,184,0.4)]">
+                <line x1="165" y1="70" x2="195" y2="160" stroke="#94a3b8" stroke-width="4"/>
+                <ellipse cx="110" cy="190" rx="60" ry="12" fill="rgba(0,0,0,0.35)"/>
+                <circle cx="110" cy="70" r="34" fill="#cbd5e1"/>
+                <path d="M80 65 C85 45, 135 45, 140 65 Z" fill="#78350f"/>
+                <circle cx="98" cy="70" r="8" fill="#0f172a"/><circle cx="122" cy="70" r="8" fill="#0f172a"/>
+                <ellipse cx="65" cy="130" rx="20" ry="25" fill="#92400e" stroke="#78350f" stroke-width="3"/>
+                <path d="M95 130 C110 125, 125 125, 125 130" stroke="#cbd5e1" stroke-width="6" fill="none"/>
+              </svg>
+            `
+          },
+          {
+            name: "スケルトンジェネラル",
+            title: "【将軍形態】",
+            desc: "漆黒の甲冑を纏い、千の兵を率いて万里を踏破する骸骨将軍！",
+            speech: ["全軍前進！22,000歩の行軍を成し遂げたぞ！", "歩みを止めぬ強靭な精神に敬礼！", "次は王座を目指して歩行行軍せよ！"],
+            svg: () => `
+              <svg viewBox="0 0 240 240" class="w-full h-full filter drop-shadow-[0_15px_25px_rgba(71,85,105,0.5)]">
+                <circle cx="120" cy="75" r="35" fill="#cbd5e1"/>
+                <path d="M90 65 L120 30 L150 65 Z" fill="#334155" stroke="#94a3b8" stroke-width="2"/>
+                <circle cx="108" cy="75" r="7" fill="#a855f7"/><circle cx="132" cy="75" r="7" fill="#a855f7"/>
+                <path d="M80 110 L160 110 L150 170 L90 170 Z" fill="#1e293b" stroke="#64748b" stroke-width="3"/>
+              </svg>
+            `
+          },
+          {
+            name: "スケルトンキング",
+            title: "【冥王形態】",
+            desc: "白骨の王冠を掲げ、42,000歩を踏破した骸骨たちの絶対君主！",
+            speech: ["死してなお歩み続ける不屈の魂！", "42,000歩達成、王者の風格なり！", "70,000歩の皇帝へ魂を昇華させよ！"],
+            svg: () => `
+              <svg viewBox="0 0 250 250" class="w-full h-full filter drop-shadow-[0_20px_35px_rgba(147,51,234,0.55)]">
+                <polygon points="90,50 100,15 125,35 150,15 160,50" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+                <circle cx="125" cy="80" r="36" fill="#e2e8f0"/>
+                <circle cx="112" cy="80" r="8" fill="#581c87"/><circle cx="138" cy="80" r="8" fill="#581c87"/>
+                <path d="M75 120 C100 110, 150 110, 175 120 L185 210 L65 210 Z" fill="#581c87"/>
+              </svg>
+            `
+          },
+          {
+            name: "スケルトンエンペラー",
+            title: "【冥界皇帝形態】",
+            desc: "70,000歩の限界を突破し、不滅の脚力と魂を宿した冥界皇帝！",
+            speech: ["フハハハ！70,000歩の完全踏破、天晴れ！", "骨身を惜しまぬ鍛錬こそ不滅の証！", "この健脚、我が軍団の誇りなり！"],
+            svg: () => `
+              <svg viewBox="0 0 260 260" class="w-full h-full filter drop-shadow-[0_20px_45px_rgba(168,85,247,0.7)]">
+                <polygon points="50,120 20,60 80,80" fill="#7e22ce" opacity="0.8"/>
+                <polygon points="210,120 240,60 180,80" fill="#7e22ce" opacity="0.8"/>
+                <polygon points="90,40 105,5 130,25 155,5 170,40" fill="#fbbf24" stroke="#78350f" stroke-width="2"/>
+                <circle cx="130" cy="25" r="5" fill="#a855f7"/>
+                <circle cx="130" cy="75" r="38" fill="#fef08a" stroke="#ca8a04" stroke-width="2"/>
+                <circle cx="116" cy="75" r="9" fill="#0f172a"/><circle cx="144" cy="75" r="9" fill="#0f172a"/>
+                <path d="M80 115 C110 100, 150 100, 180 115 L195 220 L65 220 Z" fill="#3b0764"/>
+              </svg>
+            `
+          }
+        ]
+      }
+    };
+
+    const STORAGE_KEY = "tokomon_quest_steps_v1";
+
+    let state = {
+      seasonNumber: 1,
+      seasonStartDate: null,
+      selectedLineage: 'slime',
+      weeklyTotalSteps: 0,
+      currentStageIndex: 0,
+      stageCurrentExp: 0,
+      history: [],
+      seasonArchive: [],
+      soundEnabled: true,
+      userWeight: 60
+    };
+
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playStep() {
+        if (!state.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(720, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+      playTap() {
+        if (!state.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, now);
+        osc.frequency.exponentialRampToValueAtTime(680, now + 0.12);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+      playEvolution() {
+        if (!state.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const notes = [293.66, 369.99, 440.0, 587.33, 739.99, 880.0, 1174.66];
+        notes.forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.11;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.32);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        });
+      }
+    }
+    const sound = new SoundFX();
+
+    function formatYMD(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function checkWeeklyCycle() {
+      const today = new Date();
+      const todayStr = formatYMD(today);
+
+      if (!state.seasonStartDate) {
+        state.seasonStartDate = todayStr;
+        saveGameState();
+        return;
+      }
+
+      const startDate = new Date(state.seasonStartDate);
+      const diffTime = today.getTime() - startDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 7) {
+        triggerWeeklyResetPrompt();
+      }
+    }
+
+    function getWeekRemainingDays() {
+      if (!state.seasonStartDate) return 7;
+      const today = new Date();
+      const startDate = new Date(state.seasonStartDate);
+      const diffTime = today.getTime() - startDate.getTime();
+      const elapsedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const remaining = 7 - elapsedDays;
+      return remaining > 0 ? remaining : 0;
+    }
+
+    function getWeekEndFormatted() {
+      if (!state.seasonStartDate) return "";
+      const startDate = new Date(state.seasonStartDate);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      return formatYMD(endDate);
+    }
+
+    function triggerWeeklyResetPrompt() {
+      const lineageData = MONSTER_LINEAGES[state.selectedLineage];
+      const stageData = lineageData.stages[state.currentStageIndex];
+
+      document.getElementById('seasonTotalSteps').textContent = `${state.weeklyTotalSteps.toLocaleString()} 歩`;
+      document.getElementById('seasonFinalForm').textContent = `${lineageData.name}・${stageData.name} (${stageData.title})`;
+      
+      const goalEl = document.getElementById('seasonGoalStatus');
+      if (state.weeklyTotalSteps >= WEEKLY_GOAL_STEPS) {
+        goalEl.textContent = '70,000歩 完全制覇！ 🏆';
+        goalEl.className = 'font-black text-emerald-400';
+      } else {
+        goalEl.textContent = `未達 (${state.weeklyTotalSteps.toLocaleString()} / 70,000 歩)`;
+        goalEl.className = 'font-bold text-slate-400';
+      }
+
+      const modal = document.getElementById('seasonResetModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('scale-95');
+      }, 10);
+    }
+
+    function resetNewWeekSeason() {
+      const lineageData = MONSTER_LINEAGES[state.selectedLineage];
+      const stageData = lineageData.stages[state.currentStageIndex];
+      const startDate = state.seasonStartDate || formatYMD(new Date());
+      const endDate = getWeekEndFormatted();
+
+      if (!state.seasonArchive) state.seasonArchive = [];
+      state.seasonArchive.unshift({
+        seasonNumber: state.seasonNumber,
+        dateRange: `${startDate} 〜 ${endDate}`,
+        totalSteps: state.weeklyTotalSteps,
+        lineageName: lineageData.name,
+        monsterName: stageData.name,
+        formTitle: stageData.title,
+        reachedFinal: state.currentStageIndex >= 4,
+        archivedAt: new Date().toISOString()
+      });
+
+      state.seasonNumber += 1;
+      state.seasonStartDate = formatYMD(new Date());
+      state.weeklyTotalSteps = 0;
+      state.currentStageIndex = 0;
+      state.stageCurrentExp = 0;
+      state.history = [];
+      saveGameState();
+      updateUI();
+
+      const resetModal = document.getElementById('seasonResetModal');
+      resetModal.classList.add('opacity-0');
+      setTimeout(() => resetModal.classList.add('hidden'), 300);
+
+      openStarterModal();
+      showToast(`第${state.seasonNumber}期がスタート！新しい相棒と70,000歩を目指そう`);
+    }
+
+    function executeFullSeasonCycleReset() {
+      sound.playTap();
+      state.seasonNumber = 1;
+      state.seasonStartDate = formatYMD(new Date());
+      state.selectedLineage = 'slime';
+      state.weeklyTotalSteps = 0;
+      state.currentStageIndex = 0;
+      state.stageCurrentExp = 0;
+      state.history = [];
+      state.seasonArchive = [];
+
+      saveGameState();
+      updateUI();
+
+      closeFullResetModal();
+      openStarterModal();
+      showToast('第1週にリセットし、今までの歩数履歴をすべて初期化しました！');
+    }
+
+    function renderSeasonArchiveList() {
+      const container = document.getElementById('archiveListContainer');
+      if (!state.seasonArchive || state.seasonArchive.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-slate-400 text-sm">
+            まだ完了した週の記録がありません。<br>1週間を終えるか「次の週へ進む」と、ここに栄光の記録が残ります！
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = state.seasonArchive.map(record => {
+        const isSuccess = record.totalSteps >= WEEKLY_GOAL_STEPS;
+        return `
+          <div class="p-4 rounded-2xl bg-slate-900/80 border ${isSuccess ? 'border-emerald-500/40 bg-gradient-to-r from-slate-900/90 to-emerald-950/20' : 'border-slate-800'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span class="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-black text-xs sm:text-sm border border-emerald-400/30">
+                  第${record.seasonNumber}週
+                </span>
+                <span class="text-slate-300 text-xs sm:text-sm font-medium">${escapeHtml(record.dateRange)}</span>
+                ${isSuccess ? '<span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">70,000歩 達成 🎉</span>' : ''}
+              </div>
+              <div class="text-slate-100 font-extrabold text-base flex items-center gap-2">
+                <span>👾</span>
+                <span>${escapeHtml(record.monsterName)}</span>
+                <span class="text-xs sm:text-sm text-slate-400 font-normal">(${escapeHtml(record.formTitle)})</span>
+              </div>
+            </div>
+
+            <div class="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800 shrink-0">
+              <span class="text-xs text-slate-400 block font-medium">1週間の累計歩数</span>
+              <span class="text-lg sm:text-xl font-black ${isSuccess ? 'text-emerald-400' : 'text-slate-100'}">
+                ${record.totalSteps.toLocaleString()} <span class="text-xs font-normal text-slate-400">歩</span>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadGameState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state = { ...state, ...parsed };
+        }
+      } catch (e) {
+        console.error("State load error:", e);
+      }
+
+      if (!state.userWeight || state.userWeight <= 0) state.userWeight = 60;
+      if (!Array.isArray(state.seasonArchive)) state.seasonArchive = [];
+      if (!MONSTER_LINEAGES[state.selectedLineage]) state.selectedLineage = 'slime';
+
+      checkWeeklyCycle();
+    }
+
+    function saveGameState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("State save error:", e);
+      }
+    }
+
+    function updateUI() {
+      const lineageData = MONSTER_LINEAGES[state.selectedLineage];
+      const currentStage = lineageData.stages[state.currentStageIndex];
+      const isMaxStage = state.currentStageIndex >= lineageData.stages.length - 1;
+
+      // Season Header Info
+      document.getElementById('seasonBadge').textContent = `第${state.seasonNumber}期`;
+      document.getElementById('weekDateRange').textContent = `${state.seasonStartDate || formatYMD(new Date())} 〜 ${getWeekEndFormatted()}`;
+      document.getElementById('daysRemaining').textContent = getWeekRemainingDays();
+
+      const goalPct = Math.min(100, Math.floor((state.weeklyTotalSteps / WEEKLY_GOAL_STEPS) * 100));
+      document.getElementById('weeklyGoalPercent').textContent = `${goalPct}% (${state.weeklyTotalSteps.toLocaleString()} / 70,000歩)`;
+      document.getElementById('weeklyStepsText').innerHTML = `${state.weeklyTotalSteps.toLocaleString()} <span class="text-xs text-slate-400 font-normal">/ 70,000 歩</span>`;
+
+      // Estimated Distance & Calories with weight adjustment (Distance = steps * 0.7m, Kcal = Distance(km) * Weight(kg) * 0.53)
+      const estKmNum = (state.weeklyTotalSteps * 0.7) / 1000;
+      const estKm = estKmNum.toFixed(1);
+      const weight = state.userWeight || 60;
+      const estKcal = Math.round(estKmNum * weight * 0.53);
+      document.getElementById('estDistance').textContent = estKm;
+      document.getElementById('estCalories').textContent = estKcal.toLocaleString();
+
+      const weightInput = document.getElementById('userWeightInput');
+      if (weightInput && document.activeElement !== weightInput) {
+        weightInput.value = weight;
+      }
+
+      // Monster Display
+      document.getElementById('lineageBadge').textContent = lineageData.name;
+      document.getElementById('stageBadge').textContent = `STAGE ${state.currentStageIndex + 1} / 5`;
+      document.getElementById('monsterName').textContent = currentStage.name;
+      document.getElementById('monsterDesc').textContent = currentStage.desc;
+
+      // SVG
+      document.getElementById('monsterSvgContainer').innerHTML = currentStage.svg();
+      document.getElementById('monsterGlowBg').style.backgroundColor = lineageData.colorGlow;
+
+      // Progress Bar Calculation
+      const progressBar = document.getElementById('progressBar');
+      const currentExpEl = document.getElementById('currentStageExp');
+      const targetExpEl = document.getElementById('targetStageExp');
+      const nextHintEl = document.getElementById('nextEvolutionHint');
+      const remainHintEl = document.getElementById('remainingStepsHint');
+
+      if (isMaxStage) {
+        currentExpEl.textContent = "MAX";
+        targetExpEl.textContent = "MAX";
+        progressBar.style.width = "100%";
+        nextHintEl.textContent = "究極形態へ覚醒完了！";
+        remainHintEl.textContent = "70,000歩 達成！今週の目標クリア！";
+      } else {
+        const cost = STAGE_STEP_COSTS[state.currentStageIndex];
+        const progressPercent = Math.min(100, Math.floor((state.stageCurrentExp / cost) * 100));
+        progressBar.style.width = `${progressPercent}%`;
+        currentExpEl.textContent = state.stageCurrentExp.toLocaleString();
+        targetExpEl.textContent = cost.toLocaleString();
+
+        const nextStage = lineageData.stages[state.currentStageIndex + 1];
+        nextHintEl.textContent = `次の姿：${nextStage.name}`;
+        remainHintEl.textContent = `あと ${(cost - state.stageCurrentExp).toLocaleString()} 歩で進化！`;
+      }
+
+      renderHistoryList();
+    }
+
+    function renderHistoryList() {
+      const listEl = document.getElementById('historyList');
+      if (!state.history || state.history.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-8 text-slate-400 text-sm">
+            まだ今週の記録がありません。<br>歩いた日と歩数を入力してみよう！
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = state.history.slice(0, 30).map(item => {
+        return `
+          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-sm hover:border-slate-700 transition">
+            <div class="flex items-center space-x-3 min-w-0">
+              <span class="text-xl shrink-0">👟</span>
+              <div class="truncate">
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-emerald-300 font-bold bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">${item.stepDate}</span>
+                </div>
+                ${item.memo ? `<p class="text-xs text-slate-300 truncate mt-1">${escapeHtml(item.memo)}</p>` : ''}
+              </div>
+            </div>
+            <div class="text-right shrink-0 ml-3">
+              <span class="font-black text-emerald-400 text-base">+${item.steps.toLocaleString()}</span>
+              <span class="text-xs text-slate-400">歩</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    function addWalkSteps(stepDate, steps, memo) {
+      sound.playStep();
+
+      state.weeklyTotalSteps += steps;
+      let expToAdd = steps;
+      let evolved = false;
+      let newStageIndex = state.currentStageIndex;
+
+      while (newStageIndex < 4) {
+        const stageReq = STAGE_STEP_COSTS[newStageIndex];
+        if (state.stageCurrentExp + expToAdd >= stageReq) {
+          expToAdd -= (stageReq - state.stageCurrentExp);
+          state.stageCurrentExp = 0;
+          newStageIndex += 1;
+          evolved = true;
+        } else {
+          state.stageCurrentExp += expToAdd;
+          expToAdd = 0;
+          break;
+        }
+      }
+
+      if (newStageIndex >= 4) {
+        state.stageCurrentExp += expToAdd;
+      }
+
+      state.history.unshift({
+        id: Date.now(),
+        stepDate: stepDate,
+        steps: steps,
+        memo: memo.trim(),
+        loggedAt: new Date().toISOString()
+      });
+
+      saveGameState();
+
+      if (evolved) {
+        state.currentStageIndex = newStageIndex;
+        saveGameState();
+        updateUI();
+        triggerEvolutionCelebration(newStageIndex);
+      } else {
+        updateUI();
+        showToast(`🐾 [${stepDate}] +${steps.toLocaleString()} 歩のエネルギーを注入！`);
+        triggerMonsterReaction();
+      }
+    }
+
+    function triggerMonsterReaction() {
+      const box = document.getElementById('monsterBox');
+      box.classList.add('animate-wiggle');
+      setTimeout(() => box.classList.remove('animate-wiggle'), 500);
+
+      const lineage = MONSTER_LINEAGES[state.selectedLineage];
+      const stage = lineage.stages[state.currentStageIndex];
+      const bubble = document.getElementById('monsterSpeech');
+      const randomText = stage.speech[Math.floor(Math.random() * stage.speech.length)];
+      
+      bubble.textContent = randomText;
+      bubble.classList.remove('opacity-0', '-translate-y-2');
+      bubble.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window._speechTimeout);
+      window._speechTimeout = setTimeout(() => {
+        bubble.classList.add('opacity-0', '-translate-y-2');
+        bubble.classList.remove('opacity-100', 'translate-y-0');
+      }, 3500);
+    }
+
+    function triggerEvolutionCelebration(stageIdx) {
+      sound.playEvolution();
+      const lineage = MONSTER_LINEAGES[state.selectedLineage];
+      const stage = lineage.stages[stageIdx];
+
+      if (window.confetti) {
+        confetti({
+          particleCount: 90,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+
+      document.getElementById('modalMonsterName').textContent = `${stage.name} (${stage.title})`;
+      document.getElementById('modalMonsterDesc').textContent = stage.desc;
+      document.getElementById('modalMonsterContainer').innerHTML = stage.svg();
+
+      const modal = document.getElementById('evolutionModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('scale-95');
+      }, 10);
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'px-4 py-2.5 rounded-2xl bg-slate-900/95 text-emerald-300 text-xs font-bold border border-emerald-500/40 shadow-2xl transition duration-300 transform translate-y-3 opacity-0 flex items-center space-x-2';
+      toast.innerHTML = `<span>🐾</span><span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.remove('translate-y-3', 'opacity-0'), 10);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    function openStarterModal() {
+      sound.playTap();
+      const modal = document.getElementById('starterModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('scale-95');
+      }, 10);
+    }
+
+    function closeStarterModal() {
+      const modal = document.getElementById('starterModal');
+      modal.classList.add('opacity-0');
+      modal.children[0].classList.add('scale-95');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function openArchiveModal() {
+      sound.playTap();
+      renderSeasonArchiveList();
+      const modal = document.getElementById('archiveModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('scale-95');
+      }, 10);
+    }
+
+    function closeArchiveModal() {
+      const modal = document.getElementById('archiveModal');
+      modal.classList.add('opacity-0');
+      modal.children[0].classList.add('scale-95');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function openFullResetModal() {
+      sound.playTap();
+      const modal = document.getElementById('fullResetModal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.children[0].classList.remove('scale-95');
+      }, 10);
+    }
+
+    function closeFullResetModal() {
+      const modal = document.getElementById('fullResetModal');
+      modal.classList.add('opacity-0');
+      modal.children[0].classList.add('scale-95');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGameState();
+
+      const dateInput = document.getElementById('stepDate');
+      dateInput.value = formatYMD(new Date());
+
+      // Weight input event
+      const weightInput = document.getElementById('userWeightInput');
+      if (weightInput) {
+        weightInput.value = state.userWeight || 60;
+        const handleWeightChange = () => {
+          const val = parseFloat(weightInput.value);
+          if (!isNaN(val) && val >= 20 && val <= 200) {
+            state.userWeight = val;
+            saveGameState();
+            updateUI();
+          }
+        };
+        weightInput.addEventListener('input', handleWeightChange);
+        weightInput.addEventListener('change', handleWeightChange);
+      }
+
+      updateUI();
+
+      // Sound toggle
+      const soundBtn = document.getElementById('soundToggleBtn');
+      const soundIcon = document.getElementById('soundIcon');
+      soundIcon.textContent = state.soundEnabled ? '🔊' : '🔇';
+      soundBtn.addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        soundIcon.textContent = state.soundEnabled ? '🔊' : '🔇';
+        saveGameState();
+        showToast(state.soundEnabled ? '効果音をオンにしました' : '効果音をミュートにしました');
+      });
+
+      // Archive Modal
+      document.getElementById('viewArchiveBtn').addEventListener('click', openArchiveModal);
+      document.getElementById('closeArchiveModalBtn').addEventListener('click', closeArchiveModal);
+
+      // Full Reset Modal
+      document.getElementById('openFullResetModalBtn').addEventListener('click', openFullResetModal);
+      document.getElementById('cancelFullResetBtn').addEventListener('click', closeFullResetModal);
+      document.getElementById('confirmFullResetBtn').addEventListener('click', executeFullSeasonCycleReset);
+
+      // Starter selection modal
+      document.getElementById('changePartnerBtn').addEventListener('click', openStarterModal);
+      document.getElementById('closeStarterModalBtn').addEventListener('click', closeStarterModal);
+
+      document.querySelectorAll('.starter-card').forEach(card => {
+        card.addEventListener('click', () => {
+          sound.playTap();
+          const chosen = card.getAttribute('data-lineage');
+          state.selectedLineage = chosen;
+          saveGameState();
+          updateUI();
+          closeStarterModal();
+          showToast(`相棒を「${MONSTER_LINEAGES[chosen].name}」に変更しました！`);
+        });
+      });
+
+      // Season manual & auto reset
+      document.getElementById('manualResetWeekBtn').addEventListener('click', () => {
+        triggerWeeklyResetPrompt();
+      });
+      document.getElementById('startNewWeekBtn').addEventListener('click', () => {
+        resetNewWeekSeason();
+      });
+
+      // Tap Monster
+      document.getElementById('monsterBox').addEventListener('click', () => {
+        sound.playTap();
+        triggerMonsterReaction();
+      });
+
+      // Quick step buttons
+      document.querySelectorAll('.quick-step-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          sound.playTap();
+          const val = parseInt(btn.getAttribute('data-val'), 10);
+          const input = document.getElementById('stepInput');
+          const current = parseInt(input.value, 10) || 0;
+          input.value = current + val;
+        });
+      });
+
+      document.getElementById('clearStepsBtn').addEventListener('click', () => {
+        document.getElementById('stepInput').value = '';
+      });
+
+      // Step Form Submit
+      const form = document.getElementById('stepForm');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const stepDate = document.getElementById('stepDate').value;
+        const stepInput = document.getElementById('stepInput');
+        const steps = parseInt(stepInput.value, 10);
+        const memoInput = document.getElementById('stepMemo');
+
+        if (!stepDate) {
+          showToast('歩いた日を選択してください');
+          return;
+        }
+
+        if (!steps || steps <= 0) {
+          showToast('歩数を正しく入力してください');
+          return;
+        }
+
+        addWalkSteps(stepDate, steps, memoInput.value);
+
+        stepInput.value = '';
+        memoInput.value = '';
+      });
+
+      // Clear current week logs
+      document.getElementById('clearLogsBtn').addEventListener('click', () => {
+        if (state.history.length === 0) return;
+        state.history = [];
+        saveGameState();
+        renderHistoryList();
+        showToast('今週の歩行履歴をクリアしました');
+      });
+
+      // Evolution modal close
+      document.getElementById('closeModalBtn').addEventListener('click', () => {
+        const modal = document.getElementById('evolutionModal');
+        modal.classList.add('opacity-0');
+        modal.children[0].classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+      });
+
+      // Guide Modal
+      const guideModal = document.getElementById('guideModal');
+      document.getElementById('guideBtn').addEventListener('click', () => {
+        sound.playTap();
+        guideModal.classList.remove('hidden');
+        setTimeout(() => guideModal.classList.remove('opacity-0'), 10);
+      });
+      document.getElementById('closeGuideModalBtn').addEventListener('click', () => {
+        guideModal.classList.add('opacity-0');
+        setTimeout(() => guideModal.classList.add('hidden'), 300);
+      });
+    });
+  </script>
+</body>
+</html>
