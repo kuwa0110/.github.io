@@ -130,11 +130,6 @@
           <span>記録</span>
         </button>
 
-        <button id="changePartnerBtn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-sky-500/30 text-xs sm:text-sm font-bold transition flex items-center gap-1.5">
-          <span class="text-sm">🥚</span>
-          <span>相棒</span>
-        </button>
-
         <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm transition" title="効果音の切替">
           <span id="soundIcon">🔊</span>
         </button>
@@ -528,12 +523,9 @@
 
       </div>
 
-      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-        <button id="closeStarterModalBtn" class="text-xs text-slate-400 hover:text-slate-200 transition py-2 px-3">
-          閉じる
-        </button>
-        <p class="text-[11px] text-emerald-300 font-medium">
-          ※カードをクリックすると即座に相棒として決定されます
+      <div class="text-center pt-3 border-t border-slate-800 mt-2">
+        <p class="text-xs text-emerald-300 font-medium">
+          ※カードをクリックすると相棒が決定され、冒険がスタートします！
         </p>
       </div>
     </div>
@@ -1238,6 +1230,8 @@
       if (!state.seasonStartDate) {
         state.seasonStartDate = todayStr;
         saveGameState();
+        // 初回アクセス時に相棒選択モーダルを自動で開く
+        setTimeout(openStarterModal, 500);
         return;
       }
 
@@ -1720,10 +1714,7 @@
       document.getElementById('cancelFullResetBtn').addEventListener('click', closeFullResetModal);
       document.getElementById('confirmFullResetBtn').addEventListener('click', executeFullSeasonCycleReset);
 
-      // Starter selection modal
-      document.getElementById('changePartnerBtn').addEventListener('click', openStarterModal);
-      document.getElementById('closeStarterModalBtn').addEventListener('click', closeStarterModal);
-
+      // Starter selection (強制選択のため閉じるボタンとヘッダーボタンを廃止)
       document.querySelectorAll('.starter-card').forEach(card => {
         card.addEventListener('click', () => {
           sound.playTap();
@@ -1732,7 +1723,7 @@
           saveGameState();
           updateUI();
           closeStarterModal();
-          showToast(`相棒を「${MONSTER_LINEAGES[chosen].name}」に変更しました！`);
+          showToast(`相棒を「${MONSTER_LINEAGES[chosen].name}」に決定しました！`);
         });
       });
 
